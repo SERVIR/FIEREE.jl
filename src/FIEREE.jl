@@ -408,8 +408,9 @@ function match_dates(df::DataFrame,dates::Vector{DateTime})
 
 end
 
-function find_fit(df::DataFrame,sm::Array{Float64},tcp::Array{Float64},stack::Array{Float32})
+function find_fits(df::DataFrame,sm::Array{Float64},tcp::Array{Float64},stack::Array{Float32})
     # TODO: best fitting???
+    # simplisting fitting and will return correlation of tcp to streamflow with rmse of predictions
     df.flow = convert(Array{Float64},df.flow)
 
     output = Dict{String,Dict}()
