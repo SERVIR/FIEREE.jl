@@ -366,16 +366,20 @@ function dualvarimax(Z,Phi)
 
 end
 
-function get_spt_table(geom; use_reach_id=false)
+function get_spt_table(;geom=nothing,domain=nothing use_reach_id=false)
     # define the api service url and endpoint
     spt_api_url = "https://tethys2.byu.edu/localsptapi/api"
     endpoint = "HistoricSimulation"
+
+    if geom === nothing
+        geom = get_ee_region(domain.bbox)
+    end
 
     # geom = get_ee_region(domain.bbox)
     reaches = ee.FeatureCollection("users/kelmarkert/public/geoglows/global-geoglows-drainageline")
     roi_reaches = reaches.filterBounds(geom)
     # need to update filtering process
-    # 
+    # currently gets first reach but needs to be outlet reach
     if use_reach_id
         reach_id = ee.Feature(roi_reaches.first()).get("arcid").getInfo()
         request_url = "$spt_api_url/$endpoint/?reach_id=$reach_id&return_format=json"
