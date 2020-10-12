@@ -34,7 +34,7 @@ dates = get_s1_dates(domain,start_time,end_time);
 
 spatial_modes,temporal_modes = reof(data_arr);
 
-df = get_spt_table(domain);
+df = get_spt_table(geom=test_basin);
 df_matched = match_dates(df,dates);
 
 results = find_fits(df_matched,spatial_modes,temporal_modes,data_arr)
