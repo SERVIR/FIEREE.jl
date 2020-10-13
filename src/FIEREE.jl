@@ -432,7 +432,7 @@ function find_fits(df::DataFrame,sm::Array{Float64},tcp::Array{Float64},stack::A
         for j in 1:3
             model = fit(x,y,j)
 
-            test_preds = syntesize(model,df.flow,sm[:,:,i],spatial_mean)
+            test_preds = synthesize(model,df.flow,sm[:,:,i],spatial_mean)
             
             for k in 1:size(test_preds)[1]
                 diff = test_preds[k,:,:] - stack[k,:,:,1]
