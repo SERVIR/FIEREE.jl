@@ -43,10 +43,11 @@ function domain_to_coords(domain::Domain)
 end
 
 function get_ee_region(bbox::Vector)
-    minx, miny, maxx, maxy = bbox
-    coordinates = [[minx,miny],[minx,maxy],[maxx,maxy],[maxx,miny],[minx,miny]]
+    # minx, miny, maxx, maxy = bbox
+    # coordinates = [[minx,miny],[minx,maxy],[maxx,maxy],[maxx,miny],[minx,miny]]
 
-    ee.Geometry.Polygon(coordinates)
+    # ee.Geometry.Polygon(coordinates)
+    ee.Geometry.Rectangle(bbox...)
 end
 
 function geom_to_bbox(geom)
@@ -451,7 +452,7 @@ function find_fits(df::DataFrame,sm::Array{Float64},tcp::Array{Float64},stack::A
     
 end
 
-function syntesize(model,streamflow,spatial_mode,spatial_mean)
+function synthesize(model,streamflow,spatial_mode,spatial_mean)
     z = model.(streamflow)
 
     preds = Array{Float64}(undef,(vcat(length(z),size(spatial_mode)...)...))
