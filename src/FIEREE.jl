@@ -3,7 +3,6 @@ module FIEREE
 using PyCall, JSON, Statistics, LinearAlgebra, DataFrames, Dates, HTTP, ProgressMeter, NCDatasets, Polynomials
 
 ee = pyimport("ee")
-ee.Initialize()
 
 struct Domain
     bbox::Vector
@@ -41,6 +40,13 @@ function domain_to_coords(domain::Domain)
     xx = collect(Array{Float32}(west:res:east))
     yy = collect(Array{Float32}(south:res:north))
     return xx,yy
+end
+
+function get_ee_region(bbox::Vector)
+    minx, miny, maxx, maxy = bbox
+    coordinates = [[minx,miny],[minx,maxy],[maxx,maxy],[maxx,miny],[minx,miny]]
+
+    ee.Geometry.Polygon(coordinates)
 end
 
 function geom_to_bbox(geom)
@@ -87,7 +93,7 @@ function exponential_backoff(c::Int)
 end
 
 function get_s1_dates(domain::Domain,start_time::String,end_time::String)
-    geom = ee.Geometry.Rectangle(domain.bbox...)
+    geom = get_ee_region(domain.bbox)
     s1 = (ee.ImageCollection("COPERNICUS/S1_GRD").
         filterDate(start_time,end_time).
         filterBounds(geom).
@@ -127,7 +133,7 @@ function get_s1_data(project::String,session,domain::Domain,start_time::String,e
     retry_offset = 2 # used to control where to start exponential_backoff
     n_retries = max_retries+retry_offset
 
-    geom = ee.Geometry.Rectangle(domain.bbox...)
+    geom = get_ee_region(domain.bbox)
 
     s1 = (ee.ImageCollection("COPERNICUS/S1_GRD").
         filterDate(start_time,end_time).
@@ -366,7 +372,7 @@ function get_spt_table(geom=nothing,domain=nothing, use_reach_id=false)
     endpoint = "HistoricSimulation"
 
     if geom === nothing
-        geom = ee.Geometry.Rectangle(domain.bbox...)
+        geom = get_ee_region(domain.bbox)
     end
 
     # geom = get_ee_region(domain.bbox)
