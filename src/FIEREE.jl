@@ -1,6 +1,6 @@
 module FIEREE
 
-using PyCall, JSON, Statistics, LinearAlgebra, DataFrames, Dates, HTTP, ProgressMeter, NCDatasets, Polynomials
+using PyCall, JSON, Statistics, LinearAlgebra, DataFrames, Dates, HTTP, ProgressMeter, Polynomials
 
 ee = pyimport("ee")
 
