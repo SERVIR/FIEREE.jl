@@ -44,9 +44,9 @@ end
 
 function get_ee_region(bbox::Vector)
     minx, miny, maxx, maxy = bbox
-    coordinates = [[minx,miny],[minx,maxy],[maxx,maxy],[maxx,miny],[minx,miny]]
+    coordinates = [minx,miny,minx,maxy,maxx,maxy,maxx,miny,minx,miny]
 
-    ee.Geometry.Polygon(coordinates)
+    ee.Geometry.Polygon(coordinates...)
 end
 
 function geom_to_bbox(geom)
