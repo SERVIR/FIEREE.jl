@@ -1,6 +1,6 @@
 module FIEREE
 
-using PyCall, JSON, Statistics, LinearAlgebra, DataFrames, Dates, HTTP, ProgressMeter, NCDatasets, GLM
+using PyCall, JSON, Statistics, LinearAlgebra, DataFrames, Dates, HTTP, ProgressMeter, NCDatasets, Polynomials
 
 ee = pyimport("ee")
 
@@ -366,7 +366,7 @@ function dualvarimax(Z,Phi)
 
 end
 
-function get_spt_table(;geom=nothing,domain=nothing use_reach_id=false)
+function get_spt_table(geom=nothing,domain=nothing, use_reach_id=false)
     # define the api service url and endpoint
     spt_api_url = "https://tethys2.byu.edu/localsptapi/api"
     endpoint = "HistoricSimulation"
@@ -377,7 +377,7 @@ function get_spt_table(;geom=nothing,domain=nothing use_reach_id=false)
 
     # geom = get_ee_region(domain.bbox)
     reaches = ee.FeatureCollection("users/kelmarkert/public/geoglows/global-geoglows-drainageline")
-    roi_reaches = reaches.filterBounds(geom)
+    roi_reaches = reaches.filterBounds(geom).sort("to_node",false)
     # need to update filtering process
     # currently gets first reach but needs to be outlet reach
     if use_reach_id
@@ -393,7 +393,7 @@ function get_spt_table(;geom=nothing,domain=nothing use_reach_id=false)
         data_dict = JSON.parse(String(response.body))
 
         df = DataFrame(data_dict["time_series"])
-        df[:,"datetime"] = DateTime.(df[:,"datetime"],DateFormat("Y-m-dTH:M:SZ"))
+        df[:,"datetime"] = DateTime.(SubString.(df[:,"datetime"],1,19),DateFormat("Y-m-dTH:M:Si"))
         df[:,"flow"] = convert(Array{Float64},df.flow)
     else
         throw(Base.ProcessFailedException)
@@ -415,40 +415,46 @@ end
 function find_fits(df::DataFrame,sm::Array{Float64},tcp::Array{Float64},stack::Array{Float32})
     # TODO: best fitting???
     # simplisting fitting and will return correlation of tcp to streamflow with rmse of predictions
-    df.flow = convert(Array{Float64},df.flow)
+    x = convert(Array{Float64},df.flow)
 
-    output = Dict{String,Dict}()
+    output = Dict{String,Float64}()
 
     spatial_mean = mean(stack[:,:,:],dims=1)[1,:,:]
+    flat_shape = prod(size(spatial_mean))
 
     errors = Array{Any}(undef,size(df)[1])
+    cors = Array{Any}(undef,size(df)[1])
 
     for i in 1:size(tcp)[2]
         mode_name = "tcp$i"
-        df[!,"tcp"] = tcp[:,i]
-        model = lm(@formula(tcp ~ flow), df_matched)
+        y = tcp[:,i]
 
-        test_preds = syntesize(model,df,sm[:,:,i],spatial_mean)
+        for j in 1:3
+            model = fit(x,y,j)
 
-        
-        for j in 1:size(test_preds)[1]
-            diff = test_preds[j,:,:] - stack[j,:,:,1]
-            errors = mean(abs.(diff))
+            test_preds = syntesize(model,df.flow,sm[:,:,i],spatial_mean)
+            
+            for k in 1:size(test_preds)[1]
+                diff = test_preds[k,:,:] - stack[k,:,:,1]
+                errors = mean(abs.(diff))
+                cors = cor(reshape(test_preds[k,:,:],flat_shape),reshape(stack[k,:,:,1],flat_shape))
+            end
+
+            push!(output, "$(mode_name)_fit_correlation_order$j" => cor(y,model.(x)))
+            push!(output, "$(mode_name)_pred_correlation_order$j" => mean(cors))
+            push!(output, "$(mode_name)_pred_rmse_order$j"=>mean(errors))
         end
 
-        tcp_dict = Dict("correlation" => cor(df.flow,df.tcp),"rmse"=>mean(errors))
-
-        push!(output,mode_name => tcp_dict)
     end
 
     return output
     
 end
 
-function syntesize(model,streamflow,spatial_mode,spatial_mean,)
-    z = predict(model,streamflow)
+function syntesize(model,streamflow,spatial_mode,spatial_mean)
+    z = model.(streamflow)
 
-    preds = Array{Any}(undef,(vcat(length(z),size(spatial_mode)...)...))
+    preds = Array{Float64}(undef,(vcat(length(z),size(spatial_mode)...)...))
 
     for i in 1:length(z)
         preds[i,:,:] = z[i]*spatial_mode+spatial_mean
