@@ -42,14 +42,6 @@ function domain_to_coords(domain::Domain)
     return xx,yy
 end
 
-function get_ee_region(bbox::Vector)
-    # minx, miny, maxx, maxy = bbox
-    # coordinates = [[minx,miny],[minx,maxy],[maxx,maxy],[maxx,miny],[minx,miny]]
-
-    # ee.Geometry.Polygon(coordinates)
-    ee.Geometry.Rectangle(bbox...)
-end
-
 function geom_to_bbox(geom)
     coords = geom.geometry().bounds().coordinates().getInfo()[1,:,:]
     minx, maxx = min(coords[:,1]...), max(coords[:,1]...)
@@ -94,7 +86,7 @@ function exponential_backoff(c::Int)
 end
 
 function get_s1_dates(domain::Domain,start_time::String,end_time::String)
-    geom = get_ee_region(domain.bbox)
+    geom = ee.Geometry.Rectangle(domain.bbox...)
     s1 = (ee.ImageCollection("COPERNICUS/S1_GRD").
         filterDate(start_time,end_time).
         filterBounds(geom).
@@ -134,7 +126,7 @@ function get_s1_data(project::String,session,domain::Domain,start_time::String,e
     retry_offset = 2 # used to control where to start exponential_backoff
     n_retries = max_retries+retry_offset
 
-    geom = get_ee_region(domain.bbox)
+    geom = ee.Geometry.Rectangle(domain.bbox...)
 
     s1 = (ee.ImageCollection("COPERNICUS/S1_GRD").
         filterDate(start_time,end_time).
