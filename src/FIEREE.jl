@@ -3,6 +3,7 @@ module FIEREE
 using PyCall, JSON, Statistics, LinearAlgebra, DataFrames, Dates, HTTP, ProgressMeter, NCDatasets, Polynomials
 
 ee = pyimport("ee")
+ee.Initialize()
 
 struct Domain
     bbox::Vector
@@ -365,7 +366,7 @@ function get_spt_table(geom=nothing,domain=nothing, use_reach_id=false)
     endpoint = "HistoricSimulation"
 
     if geom === nothing
-        geom = get_ee_region(domain.bbox)
+        geom = ee.Geometry.Rectangle(domain.bbox...)
     end
 
     # geom = get_ee_region(domain.bbox)
