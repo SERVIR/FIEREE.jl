@@ -13,10 +13,10 @@ end
     
 function round_out(bbox::Vector,resolution::Float64)
     min_buff = bbox .- (bbox .% resolution)
-    min_buff = map(x->round.(x,digits=10), min_buff)
+    min_buff = map(x->round.(x,digits=6), min_buff)
 
     max_buff = bbox .+ (resolution .- (bbox .% resolution))
-    max_buff = map(x->round.(x,digits=10), max_buff)
+    max_buff = map(x->round.(x,digits=6), max_buff)
 
     new_bbox = vcat(min_buff[1:2],max_buff[3:end])
 end
@@ -105,8 +105,14 @@ function get_s1_dates(domain::Domain,start_time::String,end_time::String)
     date_str = ee.List(s1.map(img_to_date).aggregate_array("isodate")).distinct().getInfo()
     # convert epoch milliseconds to date
     # Julia considers start of epoch Jan 1, 0000 so we add 1970 years to convert to correct times
-    dates = map(x->DateTime(x),date_str)
+    all_dates = map(x->DateTime(x),date_str)
 
+    expected_dates = collect(all_dates[1]:Dates.Day(12):all_dates[end])
+
+    mask = sum(map(x -> x.==expected_dates,all_dates),dims=1)[1]
+    indices = findall(!iszero,mask)
+
+    final_dates = expected_dates[indices]
 end
 
 # helper function to set date info, used for getting list of dates
@@ -127,7 +133,7 @@ function get_s1_data(project::String,session,domain::Domain,start_time::String,e
     yorigin = domain.bbox[4]
     w,h = domain.shape
     crs = domain.crs
-    revisit = 6 # days
+    revisit = 12 # days
 
     max_retries = 5
     retry_offset = 2 # used to control where to start exponential_backoff
@@ -144,7 +150,7 @@ function get_s1_data(project::String,session,domain::Domain,start_time::String,e
         select("VV")
     )
     
-    dates = ee.List(s1.map(img_to_date).aggregate_array("isodate")).distinct().getInfo()
+    dates = get_s1_dates(domain,start_time,end_time)
     n = length(dates)
 
     jrc = ee.Image("JRC/GSW1_2/GlobalSurfaceWater").select("occurrence").unmask(0).lt(80)
@@ -156,9 +162,10 @@ function get_s1_data(project::String,session,domain::Domain,start_time::String,e
     # result_arr =fill!(Array{Union{Missing, Float64}}(missing,n,h,w,c),-9999)
 
     @showprogress for i in 1:n
-        eeDate = ee.Date(dates[i])
-        img = ee.Image(s1.filterDate(eeDate,eeDate.advance(revisit,"day")).mean()).
-            updateMask(jrc)
+        t1= ee.Date(dates[i])
+        t2 = t1.advance(revisit,"day")
+        img = ee.Image(s1.filterDate(t1,t2).mean()).
+        updateMask(jrc)
 
         serialized = ee.serializer.encode(img, for_cloud_api=true)
         
@@ -441,7 +448,7 @@ function find_fits(df::DataFrame,sm::Array{Float64},tcp::Array{Float64},stack::A
             end
 
             push!(output, "$(mode_name)_fit_correlation_order$j" => cor(y,model.(x)))
-            push!(output, "$(mode_name)_pred_correlation_order$j" => mean(cors))
+            # push!(output, "$(mode_name)_pred_correlation_order$j" => mean(cors))
             push!(output, "$(mode_name)_pred_rmse_order$j"=>mean(errors))
         end
 
