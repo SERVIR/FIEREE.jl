@@ -117,7 +117,7 @@ end
 # helper function to mask high view angle areas
 function s1_qa(img)
     angle = img.select("angle")
-    return img.updateMask(angle.gt(32).And(angle.lt(45)))
+    return img.updateMask(angle.gt(30).And(angle.lt(45)))
 end
 
 function get_s1_data(project::String,session,domain::Domain,start_time::String,end_time::String)
