@@ -383,7 +383,7 @@ function get_spt_table(geom=nothing,domain=nothing, use_reach_id=false)
     end
 
     # geom = get_ee_region(domain.bbox)
-    reaches = ee.FeatureCollection("users/kelmarkert/public/geoglows/global-geoglows-drainageline")
+    reaches = ee.FeatureCollection("users/kelmarkert/public/geoglows/global_drainageline")
     roi_reaches = reaches.filterBounds(geom).sort("to_node",false)
     # need to update filtering process
     # currently gets first reach but needs to be outlet reach
