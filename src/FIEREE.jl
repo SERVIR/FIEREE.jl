@@ -144,9 +144,9 @@ function get_s1_data(project::String,session,domain::Domain,start_time::String,e
     s1 = (ee.ImageCollection("COPERNICUS/S1_GRD").
         filterDate(start_time,end_time).
         filterBounds(geom).
-        filter(ee.Filter.eq('instrumentMode', 'IW')).
+        filter(ee.Filter.eq("instrumentMode", "IW")).
         filter(ee.Filter.eq("orbitProperties_pass","ASCENDING")).
-        filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VV')).
+        filter(ee.Filter.listContains("transmitterReceiverPolarisation", "VV")).
         sort("system:time_start").
         map(s1_qa).
         select("VV")
